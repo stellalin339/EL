@@ -2,11 +2,11 @@ import { GoogleGenAI, Type, Modality } from "@google/genai";
 import { Publisher, Grade, Term, VocabItem, TestPaperData, WritingFeedback, PracticeSessionData, WordDefinition } from '../types';
 
 const getAiClient = () => {
-  // Guidelines: The API key must be obtained exclusively from the environment variable process.env.API_KEY.
-  const apiKey = process.env.API_KEY;
+  const localKey = localStorage.getItem('gemini_api_key');
+  const apiKey = localKey || process.env.API_KEY;
   
   if (!apiKey) {
-    throw new Error("API Key not found in environment variables.");
+    throw new Error("API Key not found. Please set it in the settings.");
   }
   return new GoogleGenAI({ apiKey });
 };
@@ -251,11 +251,21 @@ export const generateTestPaper = async (
 export const generateSpeech = async (text: string): Promise<string> => {
   const ai = getAiClient();
   
+  // The Gemini 2.5 TTS API strictly requires exactly 2 speakers for multiSpeakerVoiceConfig.
+  // We must map our diverse script tags (Man, Woman, Boy, Girl, Narrator) to just two voices.
+  // Strategy: 
+  // - "Speaker A" (Male/Narrator role): Narrator, Man, Boy
+  // - "Speaker B" (Female role): Woman, Girl
+  
+  const cleanText = text
+    .replace(/(Narrator|Man|Boy):/g, 'Speaker A:')
+    .replace(/(Woman|Girl):/g, 'Speaker B:');
+
   try {
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash-preview-tts",
       contents: {
-        parts: [{ text: text }],
+        parts: [{ text: cleanText }],
       },
       config: {
         responseModalities: [Modality.AUDIO],
@@ -263,24 +273,12 @@ export const generateSpeech = async (text: string): Promise<string> => {
           multiSpeakerVoiceConfig: {
             speakerVoiceConfigs: [
               {
-                speaker: 'Man',
+                speaker: 'Speaker A',
                 voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Fenrir' } }
               },
               {
-                speaker: 'Woman',
+                speaker: 'Speaker B',
                 voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } }
-              },
-              {
-                speaker: 'Boy',
-                voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Puck' } }
-              },
-              {
-                speaker: 'Girl',
-                voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } }
-              },
-              {
-                speaker: 'Narrator',
-                voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Zephyr' } }
               }
             ]
           }

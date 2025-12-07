@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   Publisher, 
   Grade, 
@@ -21,8 +21,10 @@ const XIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 t
 const BackIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>;
 const SearchIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>;
 const SpeakerIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>;
+const KeyIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>;
 
 export default function App() {
+  const [hasApiKey, setHasApiKey] = useState(false);
   const [mode, setMode] = useState<AppMode>(AppMode.Setup);
   const [config, setConfig] = useState<TextbookConfig | null>(null);
   
@@ -33,6 +35,21 @@ export default function App() {
   // Loading State
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState("");
+
+  useEffect(() => {
+    const key = localStorage.getItem('gemini_api_key');
+    if (key) {
+      setHasApiKey(true);
+    }
+  }, []);
+
+  const handleChangeKey = () => {
+    if (confirm("Are you sure you want to change the API Key? This will require you to enter a new one.")) {
+      localStorage.removeItem('gemini_api_key');
+      setHasApiKey(false);
+      window.location.reload();
+    }
+  };
 
   const handleConfigSave = (newConfig: TextbookConfig) => {
     setConfig(newConfig);
@@ -85,6 +102,14 @@ export default function App() {
     }
   };
 
+  if (!hasApiKey) {
+    return (
+      <div className="min-h-screen bg-slate-50 text-slate-900 pb-12 pt-20">
+         <ApiKeyView onSave={() => setHasApiKey(true)} />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 pb-12">
       <nav className="bg-white shadow-sm border-b border-slate-200 sticky top-0 z-30">
@@ -103,6 +128,13 @@ export default function App() {
                 Dashboard
               </button>
             )}
+            <button 
+              onClick={handleChangeKey}
+              className="flex items-center gap-1 text-sm font-medium text-slate-400 hover:text-slate-600 border border-slate-200 hover:border-slate-300 rounded px-3 py-1.5 transition-colors"
+            >
+              <KeyIcon />
+              Change Key
+            </button>
           </div>
         </div>
       </nav>
@@ -140,6 +172,53 @@ export default function App() {
           </>
         )}
       </main>
+    </div>
+  );
+}
+
+// --- API Key View ---
+
+function ApiKeyView({ onSave }: { onSave: () => void }) {
+  const [key, setKey] = useState('');
+
+  const handleSave = () => {
+    if (key.trim()) {
+      localStorage.setItem('gemini_api_key', key.trim());
+      onSave();
+    }
+  };
+
+  return (
+    <div className="max-w-md mx-auto bg-white rounded-xl shadow-lg border border-slate-100 p-8">
+      <div className="text-center mb-8">
+        <h2 className="text-2xl font-bold text-slate-800">API Key Setup</h2>
+        <p className="text-slate-500 mt-2">Enter your Google Gemini API Key to continue.</p>
+      </div>
+      
+      <div className="space-y-6">
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">API Key</label>
+          <input 
+            type="password"
+            value={key}
+            onChange={(e) => setKey(e.target.value)}
+            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none bg-white"
+            placeholder="AIzaSy..."
+          />
+        </div>
+
+        <button 
+          onClick={handleSave}
+          disabled={!key.trim()}
+          className="w-full py-3 bg-brand-600 hover:bg-brand-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-colors shadow-md shadow-brand-200"
+        >
+          Save & Continue
+        </button>
+        
+        <p className="text-xs text-center text-slate-400">
+          Your key is stored locally in your browser and used only for API requests.
+        </p>
+      </div>
     </div>
   );
 }
