@@ -2,9 +2,11 @@ import { GoogleGenAI, Type, Modality } from "@google/genai";
 import { Publisher, Grade, Term, VocabItem, TestPaperData, WritingFeedback, PracticeSessionData, WordDefinition } from '../types';
 
 const getAiClient = () => {
+  // Guidelines: The API key must be obtained exclusively from the environment variable process.env.API_KEY.
   const apiKey = process.env.API_KEY;
+  
   if (!apiKey) {
-    throw new Error("API Key not found");
+    throw new Error("API Key not found in environment variables.");
   }
   return new GoogleGenAI({ apiKey });
 };
